@@ -147,4 +147,31 @@ class ProductApiTest extends TestCase
 
         $this->assertDatabaseMissing('product_supplier', ['product_id' => $product->id]);
     }
+
+    public function test_a_product_is_soft_deleted(): void
+    {
+        $product = Product::factory()->create();
+        $supplier = Supplier::factory()->create();
+        $product->suppliers()->attach($supplier);
+
+        $this->deleteJson("/api/products/{$product->id}")->assertNoContent();
+
+        $this->assertSoftDeleted($product);
+        $this->assertDatabaseHas('product_supplier', [
+            'product_id' => $product->id,
+            'supplier_id' => $supplier->id,
+        ]);
+    }
+
+    public function test_soft_deleted_products_are_excluded_from_api_queries(): void
+    {
+        $product = Product::factory()->create();
+        $product->delete();
+
+        $this->getJson('/api/products')->assertOk()->assertJsonCount(0, 'data');
+        $this->getJson("/api/products/{$product->id}")->assertNotFound();
+
+        $this->assertNull(Product::find($product->id));
+        $this->assertNotNull(Product::withTrashed()->find($product->id));
+    }
 }

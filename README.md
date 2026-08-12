@@ -11,6 +11,7 @@ A REST API built with Laravel 11 for managing product categories, suppliers, pro
 - Search, filter, sort, and paginate products
 - Low-stock reporting through `?low_stock=1`
 - Eloquent low-stock scope and computed `is_low_stock` accessor
+- Product soft deletion that preserves product records and supplier relationships
 - Protection against negative inventory
 - Feature tests and sample seed data
 
@@ -66,7 +67,7 @@ The API will be available at `http://127.0.0.1:8000/api`.
 | POST | `/api/products` | Create a product |
 | GET | `/api/products/{id}` | Show a product |
 | PUT/PATCH | `/api/products/{id}` | Update product details |
-| DELETE | `/api/products/{id}` | Delete a product |
+| DELETE | `/api/products/{id}` | Soft-delete a product |
 
 Product list query parameters are `search`, `category_id`, `low_stock`, `is_active`, `sort`, `direction`, and `per_page`.
 
