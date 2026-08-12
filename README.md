@@ -7,6 +7,7 @@ A REST API built with Laravel 11 for managing product categories, suppliers, pro
 - Category CRUD with duplicate-name validation
 - Product CRUD with SKU, price, category, and active-status validation
 - Supplier CRUD and many-to-many product-supplier relationships
+- Laravel Sanctum token authentication
 - Search, filter, sort, and paginate products
 - Low-stock reporting through `?low_stock=1`
 - Protection against negative inventory
@@ -44,6 +45,12 @@ The API will be available at `http://127.0.0.1:8000/api`.
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | GET | `/api/health` | Health check |
+| POST | `/api/register` | Register and receive an API token |
+| POST | `/api/login` | Log in and receive an API token |
+| GET | `/api/user` | Show the authenticated user |
+| POST | `/api/logout` | Revoke the current API token |
+| GET | `/api/users` | Paginated user list |
+| GET | `/api/users/{id}` | Show a user |
 | GET | `/api/categories` | Paginated category list |
 | POST | `/api/categories` | Create a category |
 | GET | `/api/categories/{id}` | Show a category |
@@ -62,7 +69,30 @@ The API will be available at `http://127.0.0.1:8000/api`.
 
 Product list query parameters are `search`, `category_id`, `low_stock`, `is_active`, `sort`, `direction`, and `per_page`.
 
+Except for health, registration, and login, API endpoints require a Sanctum token in the `Authorization: Bearer <token>` header.
+
 ## Example requests
+
+Register:
+
+```http
+POST /api/register
+Content-Type: application/json
+
+{
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "password": "password123",
+  "password_confirmation": "password123",
+  "device_name": "postman"
+}
+```
+
+Use the returned token on protected requests:
+
+```http
+Authorization: Bearer 1|your-plain-text-token
+```
 
 Create a category:
 
