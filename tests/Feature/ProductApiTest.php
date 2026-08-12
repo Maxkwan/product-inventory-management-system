@@ -54,6 +54,15 @@ class ProductApiTest extends TestCase
             ->assertJsonPath('data.0.is_low_stock', true);
     }
 
+    public function test_product_is_low_stock_accessor_calculates_stock_status(): void
+    {
+        $lowStockProduct = Product::factory()->make(['quantity' => 2, 'reorder_level' => 5]);
+        $inStockProduct = Product::factory()->make(['quantity' => 10, 'reorder_level' => 5]);
+
+        $this->assertTrue($lowStockProduct->is_low_stock);
+        $this->assertFalse($inStockProduct->is_low_stock);
+    }
+
     public function test_a_product_quantity_can_be_updated(): void
     {
         $product = Product::factory()->create(['quantity' => 10]);

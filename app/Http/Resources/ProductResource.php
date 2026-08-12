@@ -17,7 +17,7 @@ class ProductResource extends JsonResource
             'price' => $this->price,
             'quantity' => $this->quantity,
             'reorder_level' => $this->reorder_level,
-            'is_low_stock' => $this->quantity <= $this->reorder_level,
+            'is_low_stock' => $this->is_low_stock,
             'is_active' => $this->is_active,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'suppliers' => SupplierResource::collection($this->whenLoaded('suppliers')),

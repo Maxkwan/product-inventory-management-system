@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -30,6 +31,13 @@ class Product extends Model
     public function scopeLowStock(Builder $query): Builder
     {
         return $query->whereColumn('quantity', '<=', 'reorder_level');
+    }
+
+    protected function isLowStock(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->quantity <= $this->reorder_level,
+        );
     }
 
     public function suppliers(): BelongsToMany

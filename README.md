@@ -10,6 +10,7 @@ A REST API built with Laravel 11 for managing product categories, suppliers, pro
 - Laravel Sanctum token authentication
 - Search, filter, sort, and paginate products
 - Low-stock reporting through `?low_stock=1`
+- Eloquent low-stock scope and computed `is_low_stock` accessor
 - Protection against negative inventory
 - Feature tests and sample seed data
 
