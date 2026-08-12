@@ -1,0 +1,10 @@
+/bootstrap/cache
+/node_modules
+/public/build
+/storage
+/vendor
+*.blade.php
+composer.json
+composer.lock
+package-lock.json
+README.md
