@@ -19,11 +19,60 @@ A REST API built with Laravel 11 for managing product categories, suppliers, pro
 - Named rate limits for API traffic and authentication attempts
 - Docker setup with SQLite, migrations, seed data, and Swagger generation
 
-## Requirements
+## Choose a setup method
+
+Use one of these methods:
+
+1. **Docker (simplest):** requires Docker Desktop only. PHP, Composer, SQLite, migrations, seed data, and Swagger generation run inside the container.
+2. **Local PHP:** requires PHP, Composer, and the PHP extensions listed below.
+
+Node.js and `npm install` are not required to run or test this REST API. They are only needed if you want to modify the optional Vite frontend assets.
+
+## Option 1: Docker setup
+
+### Prerequisites
+
+- Git
+- Docker Desktop with Docker Compose
+- Ensure Docker Desktop is running before entering the commands
+
+Clone and start the project:
+
+```powershell
+git clone https://github.com/Maxkwan/product-inventory-management-system.git
+Set-Location product-inventory-management-system
+docker compose up --build
+```
+
+The first build may take several minutes. The container installs Composer dependencies, creates an SQLite database, generates an application key, runs migrations and seeders, generates Swagger documentation, and starts the API.
+
+When this message appears, the server is ready:
+
+```text
+Server running on [http://0.0.0.0:8000]
+```
+
+Open:
+
+- API health check: `http://127.0.0.1:8000/api/health`
+- Swagger UI: `http://127.0.0.1:8000/api/documentation`
+
+Stop the foreground container with `Ctrl+C`. To stop and remove it from another terminal:
+
+```powershell
+docker compose down
+```
+
+The current Docker setup stores SQLite data inside the container. Removing and rebuilding the container creates fresh seeded data.
+
+## Option 2: Local PHP setup
+
+### Prerequisites
 
 - PHP 8.2 or newer
 - PHP extensions: `ctype`, `curl`, `dom`, `fileinfo`, `mbstring`, `openssl`, `pdo_sqlite` (for SQLite), `tokenizer`, and `xml`
 - Composer 2
+- Git
 
 On Windows, enable extensions in the `php.ini` reported by `php --ini`. At minimum, uncomment:
 
@@ -33,7 +82,25 @@ extension=pdo_sqlite
 extension=sqlite3
 ```
 
-## Setup
+Verify PHP and the important extensions:
+
+```powershell
+php --version
+composer --version
+php --ini
+php -m | Select-String -Pattern "fileinfo|pdo_sqlite|sqlite3"
+```
+
+### Installation
+
+Clone the repository and enter its directory:
+
+```powershell
+git clone https://github.com/Maxkwan/product-inventory-management-system.git
+Set-Location product-inventory-management-system
+```
+
+Install and initialize the application:
 
 ```powershell
 composer install
@@ -41,28 +108,28 @@ Copy-Item .env.example .env
 php artisan key:generate
 New-Item database/database.sqlite -ItemType File -Force
 php artisan migrate --seed
+php artisan l5-swagger:generate
 php artisan serve
 ```
 
-The API will be available at `http://127.0.0.1:8000/api`.
+Keep this terminal running. Open `http://127.0.0.1:8000/api/health` and confirm that it returns:
 
-Generate the OpenAPI specification and open the interactive Swagger UI:
-
-```powershell
-php artisan l5-swagger:generate
+```json
+{"status":"ok"}
 ```
 
-Swagger UI will be available at `http://127.0.0.1:8000/api/documentation`. Use the **Authorize** button and enter the token returned by `/api/register` or `/api/login`.
+Swagger UI is available at `http://127.0.0.1:8000/api/documentation`.
 
-## Docker
+## Using Swagger and authentication
 
-With Docker Desktop running, build and start the API:
+1. Open `http://127.0.0.1:8000/api/documentation`.
+2. Expand `POST /api/register` and select **Try it out**.
+3. Submit a name, unique email, password, matching `password_confirmation`, and optional `device_name`.
+4. Copy the returned token value.
+5. Select **Authorize** at the top of Swagger and paste only the token, for example `1|your-token-here`.
+6. You can now call the protected product, category, supplier, and user endpoints.
 
-```powershell
-docker compose up --build
-```
-
-The container creates its SQLite database, runs migrations and seeders, generates the OpenAPI specification, and serves the API on `http://127.0.0.1:8000`. Stop it with `Ctrl+C`, or run `docker compose down` from another terminal.
+You can use `POST /api/login` instead when the user already exists. All endpoints except health, registration, login, and Swagger documentation require the Sanctum token.
 
 ## Caching and rate limiting
 
@@ -103,8 +170,8 @@ Product list query parameters are:
 - `category_id`: filter by category
 - `min_price` and `max_price`: filter by an inclusive price range
 - `min_stock` and `max_stock`: filter by an inclusive quantity range
-- `low_stock`: use `1` to return products at or below their reorder level
-- `is_active`: filter by active status
+- `low_stock`: use `true` or `1` to return products where `quantity <= reorder_level`
+- `is_active`: use `true` or `false` to filter by active status
 - `sort`: `name`, `price`, `quantity`, or `created_at`
 - `direction`: `asc` or `desc`
 - `per_page`: results per page, from 1 to 100
@@ -175,8 +242,83 @@ Content-Type: application/json
 
 ## Tests
 
+Tests use an isolated in-memory SQLite database and do not alter the local development database:
+
 ```powershell
 php artisan test
+```
+
+Optional code-style check:
+
+```powershell
+vendor\bin\pint --test
+```
+
+## Resetting local sample data
+
+This command deletes local database records, reruns all migrations, and inserts fresh sample data:
+
+```powershell
+php artisan migrate:fresh --seed
+```
+
+Only run it when losing the current local data is acceptable.
+
+## Troubleshooting
+
+### `No application encryption key has been specified`
+
+Confirm that `.env` exists, then generate the key and restart the server:
+
+```powershell
+php artisan key:generate
+php artisan config:clear
+php artisan serve
+```
+
+### Docker Desktop is running but `docker` is not recognized
+
+Close and reopen PowerShell after installing or starting Docker Desktop. If the command is still unavailable on a per-user Windows installation, run it using the installed CLI path:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\DockerDesktop\resources\bin\docker.exe" compose up --build
+```
+
+### `could not find driver`
+
+The PHP CLI is missing SQLite support. Run `php --ini`, open the reported `php.ini`, enable these extensions, and restart the terminal:
+
+```ini
+extension=pdo_sqlite
+extension=sqlite3
+```
+
+Confirm with:
+
+```powershell
+php -m | Select-String -Pattern "pdo_sqlite|sqlite3"
+```
+
+### Composer reports `ext-fileinfo` or `Class "finfo" not found`
+
+Enable `extension=fileinfo` in the `php.ini` reported by `php --ini`, restart the terminal, and rerun `composer install`.
+
+### Port 8000 is already in use
+
+Start Laravel on another port:
+
+```powershell
+php artisan serve --port=8001
+```
+
+Then use `http://127.0.0.1:8001`. For Swagger requests to use that port too, update the local server URL in `app/OpenApi/Documentation.php` and regenerate the specification.
+
+### Swagger changes are not visible
+
+Regenerate the OpenAPI JSON and refresh the browser:
+
+```powershell
+php artisan l5-swagger:generate
 ```
 
 ## Security note
