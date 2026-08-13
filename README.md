@@ -15,6 +15,9 @@ A REST API built with Laravel 11 for managing product categories, suppliers, pro
 - Protection against negative inventory
 - Feature tests and sample seed data
 - Interactive Swagger/OpenAPI documentation
+- Five-minute caching for product, category, and supplier lists with automatic invalidation after writes
+- Named rate limits for API traffic and authentication attempts
+- Docker setup with SQLite, migrations, seed data, and Swagger generation
 
 ## Requirements
 
@@ -50,6 +53,22 @@ php artisan l5-swagger:generate
 ```
 
 Swagger UI will be available at `http://127.0.0.1:8000/api/documentation`. Use the **Authorize** button and enter the token returned by `/api/register` or `/api/login`.
+
+## Docker
+
+With Docker Desktop running, build and start the API:
+
+```powershell
+docker compose up --build
+```
+
+The container creates its SQLite database, runs migrations and seeders, generates the OpenAPI specification, and serves the API on `http://127.0.0.1:8000`. Stop it with `Ctrl+C`, or run `docker compose down` from another terminal.
+
+## Caching and rate limiting
+
+Product, category, and supplier list responses are cached for five minutes. Query parameters are part of the cache key, and create, update, or delete operations invalidate inventory list caches automatically. The cache store is controlled by `CACHE_STORE` and defaults to Laravel's database cache.
+
+The API permits 60 requests per minute per authenticated user or IP address. Registration and login have an additional limit of 10 attempts per minute per email/IP combination. Exceeded limits return a JSON `429 Too Many Requests` response with a `Retry-After` header.
 
 ## Endpoints
 

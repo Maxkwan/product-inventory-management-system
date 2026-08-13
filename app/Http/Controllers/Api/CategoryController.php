@@ -7,20 +7,28 @@ use App\Http\Requests\StoreCategoryRequest;
 use App\Http\Requests\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
+use App\Support\InventoryCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 
 class CategoryController extends Controller
 {
     public function index(): AnonymousResourceCollection
     {
-        return CategoryResource::collection(Category::query()->withCount('products')->orderBy('name')->paginate(15));
+        $categories = Cache::remember(InventoryCache::key('categories.index', request()->query()), InventoryCache::TTL_SECONDS,
+            fn () => Category::query()->withCount('products')->orderBy('name')->paginate(15));
+
+        return CategoryResource::collection($categories);
     }
 
     public function store(StoreCategoryRequest $request): CategoryResource
     {
-        return new CategoryResource(Category::create($request->validated()));
+        $category = Category::create($request->validated());
+        InventoryCache::invalidate();
+
+        return new CategoryResource($category);
     }
 
     public function show(Category $category): CategoryResource
@@ -31,6 +39,7 @@ class CategoryController extends Controller
     public function update(UpdateCategoryRequest $request, Category $category): CategoryResource
     {
         $category->update($request->validated());
+        InventoryCache::invalidate();
 
         return new CategoryResource($category->refresh()->loadCount('products'));
     }
@@ -42,6 +51,7 @@ class CategoryController extends Controller
         }
 
         $category->delete();
+        InventoryCache::invalidate();
 
         return response()->noContent();
     }
