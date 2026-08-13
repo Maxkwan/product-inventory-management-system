@@ -8,12 +8,13 @@ A REST API built with Laravel 11 for managing product categories, suppliers, pro
 - Product CRUD with SKU, price, category, and active-status validation
 - Supplier CRUD and many-to-many product-supplier relationships
 - Laravel Sanctum token authentication
-- Search, filter, sort, and paginate products
+- Search, filter by category, price range, and stock level, sort, and paginate products
 - Low-stock reporting through `?low_stock=1`
 - Eloquent low-stock scope and computed `is_low_stock` accessor
 - Product soft deletion that preserves product records and supplier relationships
 - Protection against negative inventory
 - Feature tests and sample seed data
+- Interactive Swagger/OpenAPI documentation
 
 ## Requirements
 
@@ -42,6 +43,14 @@ php artisan serve
 
 The API will be available at `http://127.0.0.1:8000/api`.
 
+Generate the OpenAPI specification and open the interactive Swagger UI:
+
+```powershell
+php artisan l5-swagger:generate
+```
+
+Swagger UI will be available at `http://127.0.0.1:8000/api/documentation`. Use the **Authorize** button and enter the token returned by `/api/register` or `/api/login`.
+
 ## Endpoints
 
 | Method | Endpoint | Description |
@@ -69,7 +78,19 @@ The API will be available at `http://127.0.0.1:8000/api`.
 | PUT/PATCH | `/api/products/{id}` | Update product details |
 | DELETE | `/api/products/{id}` | Soft-delete a product |
 
-Product list query parameters are `search`, `category_id`, `low_stock`, `is_active`, `sort`, `direction`, and `per_page`.
+Product list query parameters are:
+
+- `search`: match a product name or SKU
+- `category_id`: filter by category
+- `min_price` and `max_price`: filter by an inclusive price range
+- `min_stock` and `max_stock`: filter by an inclusive quantity range
+- `low_stock`: use `1` to return products at or below their reorder level
+- `is_active`: filter by active status
+- `sort`: `name`, `price`, `quantity`, or `created_at`
+- `direction`: `asc` or `desc`
+- `per_page`: results per page, from 1 to 100
+
+For example, `/api/products?category_id=1&min_price=10&max_price=100&min_stock=1&max_stock=50&per_page=15` combines category, price, stock, and pagination filters.
 
 Except for health, registration, and login, API endpoints require a Sanctum token in the `Authorization: Bearer <token>` header.
 

@@ -43,6 +43,16 @@ class ProductApiTest extends TestCase
         $this->assertDatabaseCount('product_supplier', 2);
     }
 
+    public function test_a_product_can_be_viewed(): void
+    {
+        $product = Product::factory()->create();
+
+        $this->getJson("/api/products/{$product->id}")
+            ->assertOk()
+            ->assertJsonPath('data.id', $product->id)
+            ->assertJsonPath('data.sku', $product->sku);
+    }
+
     public function test_products_can_be_filtered_to_low_stock(): void
     {
         Product::factory()->create(['quantity' => 2, 'reorder_level' => 5]);
@@ -52,6 +62,61 @@ class ProductApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.is_low_stock', true);
+    }
+
+    public function test_products_can_be_filtered_by_category(): void
+    {
+        $selectedCategory = Category::factory()->create();
+        $otherCategory = Category::factory()->create();
+        $selectedProduct = Product::factory()->for($selectedCategory)->create();
+        Product::factory()->for($otherCategory)->create();
+
+        $this->getJson("/api/products?category_id={$selectedCategory->id}")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $selectedProduct->id);
+    }
+
+    public function test_products_can_be_filtered_by_price_range(): void
+    {
+        Product::factory()->create(['price' => 9.99]);
+        $selectedProduct = Product::factory()->create(['price' => 25.00]);
+        Product::factory()->create(['price' => 75.00]);
+
+        $this->getJson('/api/products?min_price=20&max_price=50')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $selectedProduct->id);
+    }
+
+    public function test_products_can_be_filtered_by_stock_range(): void
+    {
+        Product::factory()->create(['quantity' => 2]);
+        $selectedProduct = Product::factory()->create(['quantity' => 10]);
+        Product::factory()->create(['quantity' => 30]);
+
+        $this->getJson('/api/products?min_stock=5&max_stock=15')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $selectedProduct->id);
+    }
+
+    public function test_products_are_paginated(): void
+    {
+        Product::factory(3)->create();
+
+        $this->getJson('/api/products?per_page=2')
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.per_page', 2)
+            ->assertJsonPath('meta.total', 3);
+    }
+
+    public function test_product_filter_ranges_are_validated(): void
+    {
+        $this->getJson('/api/products?min_price=50&max_price=10&min_stock=20&max_stock=5')
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['max_price', 'max_stock']);
     }
 
     public function test_product_is_low_stock_accessor_calculates_stock_status(): void

@@ -3,28 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\IndexProductRequest;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
-use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(IndexProductRequest $request): AnonymousResourceCollection
     {
-        $validated = $request->validate([
-            'search' => ['nullable', 'string', 'max:255'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-            'low_stock' => ['nullable', 'boolean'],
-            'is_active' => ['nullable', 'boolean'],
-            'sort' => ['nullable', 'in:name,price,quantity,created_at'],
-            'direction' => ['nullable', 'in:asc,desc'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
-        ]);
+        $validated = $request->validated();
 
         $products = Product::query()
             ->with(['category', 'suppliers'])
@@ -32,6 +24,10 @@ class ProductController extends Controller
                 fn ($nested) => $nested->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%")
             ))
             ->when($validated['category_id'] ?? null, fn ($query, $categoryId) => $query->where('category_id', $categoryId))
+            ->when(array_key_exists('min_price', $validated), fn ($query) => $query->where('price', '>=', $validated['min_price']))
+            ->when(array_key_exists('max_price', $validated), fn ($query) => $query->where('price', '<=', $validated['max_price']))
+            ->when(array_key_exists('min_stock', $validated), fn ($query) => $query->where('quantity', '>=', $validated['min_stock']))
+            ->when(array_key_exists('max_stock', $validated), fn ($query) => $query->where('quantity', '<=', $validated['max_stock']))
             ->when(array_key_exists('is_active', $validated), fn ($query) => $query->where('is_active', $validated['is_active']))
             ->when($validated['low_stock'] ?? false, fn ($query) => $query->lowStock())
             ->orderBy($validated['sort'] ?? 'created_at', $validated['direction'] ?? 'desc')
