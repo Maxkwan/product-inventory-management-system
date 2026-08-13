@@ -64,6 +64,33 @@ class ProductApiTest extends TestCase
             ->assertJsonPath('data.0.is_low_stock', true);
     }
 
+    public function test_swagger_boolean_query_values_filter_active_products(): void
+    {
+        $activeProduct = Product::factory()->create(['is_active' => true]);
+        $inactiveProduct = Product::factory()->create(['is_active' => false]);
+
+        $this->getJson('/api/products?is_active=true')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $activeProduct->id);
+
+        $this->getJson('/api/products?is_active=false')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $inactiveProduct->id);
+    }
+
+    public function test_swagger_boolean_query_value_filters_low_stock_products(): void
+    {
+        Product::factory()->create(['quantity' => 2, 'reorder_level' => 5]);
+        Product::factory()->create(['quantity' => 20, 'reorder_level' => 5]);
+
+        $this->getJson('/api/products?low_stock=true')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.is_low_stock', true);
+    }
+
     public function test_products_can_be_filtered_by_category(): void
     {
         $selectedCategory = Category::factory()->create();

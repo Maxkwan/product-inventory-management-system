@@ -27,4 +27,23 @@ class IndexProductRequest extends FormRequest
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];
     }
+
+    protected function prepareForValidation(): void
+    {
+        $normalized = [];
+
+        foreach (['low_stock', 'is_active'] as $field) {
+            if (! $this->has($field) || ! is_string($this->input($field))) {
+                continue;
+            }
+
+            $value = filter_var($this->input($field), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+            if ($value !== null) {
+                $normalized[$field] = $value;
+            }
+        }
+
+        $this->merge($normalized);
+    }
 }
