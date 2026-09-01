@@ -29,6 +29,19 @@ class CategoryApiTest extends TestCase
             ->assertJsonValidationErrors('name');
     }
 
+    public function test_categories_are_listed_from_latest_to_oldest(): void
+    {
+        $oldest = Category::factory()->create(['created_at' => now()->subDays(2)]);
+        $latest = Category::factory()->create(['created_at' => now()]);
+        $middle = Category::factory()->create(['created_at' => now()->subDay()]);
+
+        $this->getJson('/api/categories')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $latest->id)
+            ->assertJsonPath('data.1.id', $middle->id)
+            ->assertJsonPath('data.2.id', $oldest->id);
+    }
+
     public function test_a_category_with_products_cannot_be_deleted(): void
     {
         $category = Category::factory()->create();

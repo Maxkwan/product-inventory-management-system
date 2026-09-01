@@ -8,10 +8,8 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
-use App\Support\InventoryCache;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
@@ -20,7 +18,7 @@ class ProductController extends Controller
     {
         $validated = $request->validated();
 
-        $products = Cache::remember(InventoryCache::key('products.index', $validated), InventoryCache::TTL_SECONDS, fn () => Product::query()
+        $products = Product::query()
             ->with(['category', 'suppliers'])
             ->when($validated['search'] ?? null, fn ($query, $search) => $query->where(
                 fn ($nested) => $nested->where('name', 'like', "%{$search}%")->orWhere('sku', 'like', "%{$search}%")
@@ -33,8 +31,9 @@ class ProductController extends Controller
             ->when(array_key_exists('is_active', $validated), fn ($query) => $query->where('is_active', $validated['is_active']))
             ->when($validated['low_stock'] ?? false, fn ($query) => $query->lowStock())
             ->orderBy($validated['sort'] ?? 'created_at', $validated['direction'] ?? 'desc')
+            ->when(! array_key_exists('sort', $validated), fn ($query) => $query->orderByDesc('id'))
             ->paginate($validated['per_page'] ?? 15)
-            ->withQueryString());
+            ->withQueryString();
 
         return ProductResource::collection($products);
     }
@@ -51,8 +50,6 @@ class ProductController extends Controller
 
             return $product;
         });
-
-        InventoryCache::invalidate();
 
         return new ProductResource($product->load(['category', 'suppliers']));
     }
@@ -77,15 +74,12 @@ class ProductController extends Controller
             }
         });
 
-        InventoryCache::invalidate();
-
         return new ProductResource($product->refresh()->load(['category', 'suppliers']));
     }
 
     public function destroy(Product $product): Response
     {
         $product->delete();
-        InventoryCache::invalidate();
 
         return response()->noContent();
     }

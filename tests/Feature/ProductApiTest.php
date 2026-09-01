@@ -53,6 +53,19 @@ class ProductApiTest extends TestCase
             ->assertJsonPath('data.sku', $product->sku);
     }
 
+    public function test_products_are_listed_from_latest_to_oldest_by_default(): void
+    {
+        $oldest = Product::factory()->create(['created_at' => now()->subDays(2)]);
+        $latest = Product::factory()->create(['created_at' => now()]);
+        $middle = Product::factory()->create(['created_at' => now()->subDay()]);
+
+        $this->getJson('/api/products')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $latest->id)
+            ->assertJsonPath('data.1.id', $middle->id)
+            ->assertJsonPath('data.2.id', $oldest->id);
+    }
+
     public function test_products_can_be_filtered_to_low_stock(): void
     {
         Product::factory()->create(['quantity' => 2, 'reorder_level' => 5]);

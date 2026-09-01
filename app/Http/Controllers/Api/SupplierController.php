@@ -16,8 +16,8 @@ class SupplierController extends Controller
 {
     public function index(): AnonymousResourceCollection
     {
-        $suppliers = Cache::remember(InventoryCache::key('suppliers.index', request()->query()), InventoryCache::TTL_SECONDS,
-            fn () => Supplier::query()->withCount('products')->orderBy('name')->paginate(15));
+        $suppliers = Cache::remember(InventoryCache::key('suppliers.index.latest', request()->query()), InventoryCache::TTL_SECONDS,
+            fn () => Supplier::query()->withCount('products')->latest()->latest('id')->paginate(15));
 
         return SupplierResource::collection($suppliers);
     }

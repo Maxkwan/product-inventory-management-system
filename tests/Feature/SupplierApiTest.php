@@ -44,6 +44,19 @@ class SupplierApiTest extends TestCase
             ->assertJsonValidationErrors('name');
     }
 
+    public function test_suppliers_are_listed_from_latest_to_oldest(): void
+    {
+        $oldest = Supplier::factory()->create(['created_at' => now()->subDays(2)]);
+        $latest = Supplier::factory()->create(['created_at' => now()]);
+        $middle = Supplier::factory()->create(['created_at' => now()->subDay()]);
+
+        $this->getJson('/api/suppliers')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $latest->id)
+            ->assertJsonPath('data.1.id', $middle->id)
+            ->assertJsonPath('data.2.id', $oldest->id);
+    }
+
     public function test_a_supplier_can_be_viewed_updated_and_deleted(): void
     {
         $supplier = Supplier::factory()->create(['name' => 'Old Name']);

@@ -17,8 +17,8 @@ class CategoryController extends Controller
 {
     public function index(): AnonymousResourceCollection
     {
-        $categories = Cache::remember(InventoryCache::key('categories.index', request()->query()), InventoryCache::TTL_SECONDS,
-            fn () => Category::query()->withCount('products')->orderBy('name')->paginate(15));
+        $categories = Cache::remember(InventoryCache::key('categories.index.latest', request()->query()), InventoryCache::TTL_SECONDS,
+            fn () => Category::query()->withCount('products')->latest()->latest('id')->paginate(15));
 
         return CategoryResource::collection($categories);
     }
